@@ -74,6 +74,11 @@ test: var vendor up ## Run the test suite
 	$(RUN) vendor/bin/testo $(ARGS)
 .PHONY: test
 
+example: var vendor ## Export spans to a local Jaeger (UI: http://localhost:16686)
+	$(DOCKER_COMPOSE) --profile example up --remove-orphans --detach --wait jaeger
+	$(RUN) php examples/otlp_grpc.php
+.PHONY: example
+
 infect: var vendor up ## Run mutation testing
 	$(RUN) infection --show-mutations $(ARGS)
 .PHONY: infect

@@ -6,8 +6,18 @@ services:
     environment:
       IN_CONTAINER: true
       HISTFILE: /workspace/var/.docker_history
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     volumes:
       - .:/workspace
       - ~/.composer/cache:/composer/cache
     tty: true
     init: true
+
+  jaeger:
+    profiles: ["example"]
+    image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317"
+      - "${JAEGER_UI_PORT:-16686}:16686"
