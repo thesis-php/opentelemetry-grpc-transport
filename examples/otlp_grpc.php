@@ -50,7 +50,6 @@ try {
     $root->end();
 }
 
-// Flushes the pending spans and closes the connection.
 $tracerProvider->shutdown();
 
 echo 'OTLP gRPC example complete!', \PHP_EOL;

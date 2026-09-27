@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Thesis\OpenTelemetry\Grpc;
 
-use Google\Rpc\Code;
 use Testo\Assert;
 use Testo\Test;
+use Thesis\Google\Rpc\Code;
 use Thesis\Grpc\Client;
 use Thesis\Grpc\InvokeError;
 use Thesis\Grpc\Metadata;

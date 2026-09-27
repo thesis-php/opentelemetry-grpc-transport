@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Thesis\OpenTelemetry\Grpc;
 
 use Amp\Socket\Certificate;
-use Google\Rpc\Code;
 use OpenTelemetry\SDK\Common\Export\TransportFactoryInterface;
 use OpenTelemetry\SDK\Common\Export\TransportInterface;
+use Thesis\Google\Rpc\Code;
 use Thesis\Grpc\Client;
 use Thesis\Grpc\Compression;
+use Thesis\Grpc\Deadline;
 use Thesis\Grpc\Metadata;
 use Thesis\Grpc\Retry;
 use Thesis\OpenTelemetry\Grpc\Internal\Endpoint;
@@ -60,23 +61,30 @@ final readonly class TransportFactory implements TransportFactoryInterface
         $builder = $this->builder
             ->withHost($target->target)
             ->withEncoding(new RawMessageEncoder())
-            ->withUnaryInterceptors(new Retry\Interceptor(new Retry\Config(
-                maxAttempts: max($maxRetries + 1, 1),
-                /** @see https://opentelemetry.io/docs/specs/otlp/#otlpgrpc-response */
-                retryableCodes: [
-                    Code::CANCELLED,
-                    Code::DEADLINE_EXCEEDED,
-                    Code::RESOURCE_EXHAUSTED,
-                    Code::ABORTED,
-                    Code::OUT_OF_RANGE,
-                    Code::UNAVAILABLE,
-                    Code::DATA_LOSS,
-                ],
-                backoff: new Retry\Backoff\Exponential(
-                    base: $retryDelay / self::MILLIS_PER_SECOND,
-                    max: $retryDelay * 2 ** max($maxRetries - 1, 0) / self::MILLIS_PER_SECOND,
+            ->withUnaryInterceptors(
+                // Outside of the retries, so the timeout bounds the whole export, as the spec defines it,
+                // rather than each attempt.
+                new Deadline\ClientInterceptor(
+                    Metadata\Timeout::milliseconds(max((int) ($timeout * self::MILLIS_PER_SECOND), 0)),
                 ),
-            )))
+                new Retry\Interceptor(new Retry\Config(
+                    maxAttempts: max($maxRetries + 1, 1),
+                    /** @see https://opentelemetry.io/docs/specs/otlp/#otlpgrpc-response */
+                    retryableCodes: [
+                        Code::CANCELLED,
+                        Code::DEADLINE_EXCEEDED,
+                        Code::RESOURCE_EXHAUSTED,
+                        Code::ABORTED,
+                        Code::OUT_OF_RANGE,
+                        Code::UNAVAILABLE,
+                        Code::DATA_LOSS,
+                    ],
+                    backoff: new Retry\Backoff\Exponential(
+                        base: $retryDelay / self::MILLIS_PER_SECOND,
+                        max: $retryDelay * 2 ** max($maxRetries - 1, 0) / self::MILLIS_PER_SECOND,
+                    ),
+                )),
+            )
             ->withTransferTimeout($timeout);
 
         $compressor = self::compressor($compression);
@@ -91,9 +99,7 @@ final readonly class TransportFactory implements TransportFactoryInterface
         return new Transport(
             $builder->build(),
             $target->method,
-            new Metadata($headers)->withKey( // @phpstan-ignore argument.type
-                Metadata\Timeout::milliseconds(max((int) ($timeout * self::MILLIS_PER_SECOND), 0)),
-            ),
+            new Metadata($headers), // @phpstan-ignore argument.type
         );
     }
 

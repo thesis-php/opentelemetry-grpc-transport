@@ -100,7 +100,7 @@ final class Transport implements TransportInterface
                 unset($futures[$nextId]);
 
                 if ($cancellationId !== null) {
-                    $cancellation?->unsubscribe($cancellationId);
+                    $cancellation->unsubscribe($cancellationId);
                 }
             }
         });
@@ -139,7 +139,7 @@ final class Transport implements TransportInterface
             }
 
             if ($cancellationId !== null) {
-                $cancellation?->unsubscribe($cancellationId);
+                $cancellation->unsubscribe($cancellationId);
             }
         }
     }
@@ -161,7 +161,7 @@ final class Transport implements TransportInterface
             return false;
         } finally {
             if ($cancellationId !== null) {
-                $cancellation?->unsubscribe($cancellationId);
+                $cancellation->unsubscribe($cancellationId);
             }
         }
     }
